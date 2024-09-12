@@ -328,12 +328,14 @@ class SpectralConv(BaseSpectralConv):
         self.separable = separable
 
         tensor_kwargs = decomposition_kwargs if decomposition_kwargs is not None else {}
-        if factorization is None:
-            self.weight = nn.ModuleList(
-                [torch.tensor(weight_shape, dtype=torch.cfloat) for _ in range(n_layers)]
-            )
-            for w in self.weight:
-                w.normal_(0, init_std)
+        if factorization == "Dense":
+            def get_weight(shape):
+                w = torch.empty(shape, dtype=torch.cfloat)
+                return nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
+                
+            self.weight = nn.ParameterList(
+                [get_weight(weight_shape) for _ in range(n_layers)]
+            )                    
         elif joint_factorization:
             self.weight = FactorizedTensor.new(
                 (n_layers, *weight_shape),
