@@ -332,26 +332,33 @@ class SpectralConv(BaseSpectralConv):
             def get_weight(shape):
                 w = torch.empty(shape, dtype=torch.cfloat)
                 return nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
-                
+
             self.weight = nn.ParameterList(
                 [get_weight(weight_shape) for _ in range(n_layers)]
-            )                    
-        elif joint_factorization:
-            self.weight = FactorizedTensor.new(
-                (n_layers, *weight_shape),
-                rank=self.rank, factorization=factorization, fixed_rank_modes=fixed_rank_modes,
-                dtype=torch.cfloat, **tensor_kwargs,
             )
-            self.weight.normal_(0, init_std)
         else:
-            self.weight = nn.ModuleList([
-                FactorizedTensor.new(weight_shape, rank=self.rank, 
-                                     factorization=factorization, fixed_rank_modes=fixed_rank_modes,
-                                     **tensor_kwargs, dtype=torch.cfloat) 
-                for _ in range(n_layers)]
-            )
-            for w in self.weight:
-                w.normal_(0, init_std)
+            def init_factorized_weight(w):
+                # Use Xavier initialization for the factorized tensor
+                for factor in w.factors:
+                    nn.init.xavier_uniform_(factor, gain=nn.init.calculate_gain('relu'))
+
+            if joint_factorization:
+                self.weight = FactorizedTensor.new(
+                    (n_layers, *weight_shape),
+                    rank=self.rank, factorization=factorization, fixed_rank_modes=fixed_rank_modes,
+                    dtype=torch.cfloat, **tensor_kwargs,
+                )
+                init_factorized_weight(self.weight)  # Apply Xavier init to the factorized tensor
+            else:
+                self.weight = nn.ModuleList([
+                    FactorizedTensor.new(weight_shape, rank=self.rank, 
+                                        factorization=factorization, fixed_rank_modes=fixed_rank_modes,
+                                        **tensor_kwargs, dtype=torch.cfloat) 
+                    for _ in range(n_layers)]
+                )
+                for w in self.weight:
+                    init_factorized_weight(w)  # Apply Xavier init to each factorized tensor
+
         self._contract = get_contract_fun(
             self.weight[0], implementation=implementation, separable=separable
         )
