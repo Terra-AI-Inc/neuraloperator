@@ -107,6 +107,7 @@ class FNOBlocks(nn.Module):
         factorization=None,
         rank=1.0,
         conv_module=SpectralConv,
+        uconv_module=None,
         joint_factorization=False,
         fixed_rank_modes=False,
         implementation="factorized",
@@ -144,6 +145,7 @@ class FNOBlocks(nn.Module):
         self.separable = separable
         self.preactivation = preactivation
         self.ada_in_features = ada_in_features
+        self.uconv_module = uconv_module
 
         # apply real nonlin if data is real, otherwise CGELU
         if complex_data:
@@ -174,6 +176,14 @@ class FNOBlocks(nn.Module):
             n_layers=n_layers,
             **complex_kwarg
         )
+        
+        if uconv_module is not None:
+            self.uconvs = uconv_module(
+                self.in_channels,
+                self.out_channels,
+                u_layers=n_layers,
+                **complex_kwarg
+            )
 
         self.fno_skips = nn.ModuleList(
             [
@@ -304,7 +314,13 @@ class FNOBlocks(nn.Module):
         if self.norm is not None:
             x_fno = self.norm[self.n_norms * index](x_fno)
 
+        if self.uconv_module is not None:
+            x_ufno = self.uconvs(x, index, output_shape=output_shape)
+            
         x = x_fno + x_skip_fno
+        
+        if self.uconv_module is not None:
+            x = x + x_ufno
 
         if (self.channel_mlp is not None) or (index < (self.n_layers - 1)):
             x = self.non_linearity(x)

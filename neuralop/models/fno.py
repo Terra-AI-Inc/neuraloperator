@@ -112,6 +112,7 @@ class FNO(BaseModel, name='FNO'):
         lifting_channels=256,
         projection_channels=256,
         n_layers=4,
+        u_layers=0,
         positional_embedding="grid",
         output_scaling_factor=None,
         max_n_modes=None,
@@ -135,6 +136,7 @@ class FNO(BaseModel, name='FNO'):
         domain_padding=None,
         domain_padding_mode="one-sided",
         conv_module=SpectralConv,
+        uconv_module=None,
         complex_data=False,
         **kwargs
     ):
@@ -150,6 +152,7 @@ class FNO(BaseModel, name='FNO'):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_layers = n_layers
+        self.u_layers = u_layers
         self.joint_factorization = joint_factorization
         self.non_linearity = non_linearity
         self.rank = rank
@@ -228,6 +231,38 @@ class FNO(BaseModel, name='FNO'):
             **kwargs
         )
         
+        if self.u_layers > 0:
+            self.ufno_blocks = FNOBlocks(
+                in_channels=hidden_channels,
+                out_channels=hidden_channels,
+                n_modes=self.n_modes,
+                output_scaling_factor=output_scaling_factor,
+                use_channel_mlp=use_channel_mlp,
+                channel_mlp_dropout=channel_mlp_dropout,
+                channel_mlp_expansion=channel_mlp_expansion,
+                non_linearity=non_linearity,
+                stabilizer=stabilizer,
+                norm=norm,
+                preactivation=preactivation,
+                fno_skip=fno_skip,
+                channel_mlp_skip=channel_mlp_skip,
+                complex_data=complex_data,
+                max_n_modes=max_n_modes,
+                fno_block_precision=fno_block_precision,
+                rank=rank,
+                fixed_rank_modes=fixed_rank_modes,
+                implementation=implementation,
+                separable=separable,
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                joint_factorization=joint_factorization,
+                conv_module=conv_module,
+                uconv_module=uconv_module,
+                n_layers=u_layers,
+                is_ulayers=True,
+                **kwargs
+            )
+        
         # if adding a positional embedding, add those channels to lifting
         lifting_in_channels = self.in_channels
         if self.positional_embedding is not None:
@@ -298,6 +333,9 @@ class FNO(BaseModel, name='FNO'):
 
         for layer_idx in range(self.n_layers):
             x = self.fno_blocks(x, layer_idx, output_shape=output_shape[layer_idx])
+            
+        for layer_idx in range(self.u_layers):
+            x = self.ufno_blocks(x, layer_idx, output_shape=output_shape[layer_idx])
 
         if self.domain_padding is not None:
             x = self.domain_padding.unpad(x)
@@ -313,6 +351,8 @@ class FNO(BaseModel, name='FNO'):
     @n_modes.setter
     def n_modes(self, n_modes):
         self.fno_blocks.n_modes = n_modes
+        if self.u_layers > 0:
+            self.ufno_blocks.n_modes = n_modes
         self._n_modes = n_modes
 
 
