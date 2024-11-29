@@ -333,6 +333,12 @@ class FNOBlocks(nn.Module):
 
             if index < (self.n_layers - 1):
                 x = self.non_linearity(x)
+                
+        reduce_dims = (0, 2, 3, 4)
+        epsilon = 1e-5
+        mean = x.mean(dim=reduce_dims, keepdim=True)
+        var = x.var(dim=reduce_dims, keepdim=True, unbiased=False)
+        x = (x - mean) / torch.sqrt(var + epsilon)
 
         return x
 
