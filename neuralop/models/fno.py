@@ -285,17 +285,16 @@ class FNO(BaseModel, name='FNO'):
         # if lifting_channels is passed, make lifting a Channel-Mixing MLP
         # with a hidden layer of size lifting_channels
         if self.lifting_channels:
-        #     self.lifting = ChannelMLP(
-        #         in_channels=lifting_in_channels,
-        #         out_channels=self.hidden_channels,
-        #         hidden_channels=self.lifting_channels,
-        #         n_layers=2,
-        #         n_dim=self.n_dim,
-        #         non_linearity=non_linearity
-        #     )
-        # # otherwise, make it a linear layer
-        # else:
-            print("LINEAR LAYER")
+            self.lifting = ChannelMLP(
+                in_channels=lifting_in_channels,
+                out_channels=self.hidden_channels,
+                hidden_channels=self.lifting_channels,
+                n_layers=2,
+                n_dim=self.n_dim,
+                non_linearity=non_linearity
+            )
+        # otherwise, make it a linear layer
+        else:
             self.lifting = ChannelMLP(
                 in_channels=lifting_in_channels,
                 hidden_channels=self.hidden_channels,
@@ -342,36 +341,8 @@ class FNO(BaseModel, name='FNO'):
         if self.positional_embedding is not None:
             x = self.positional_embedding(x)
             
-        reduce_dims = (0, 2, 3, 4)
-        epsilon = 1e-5
-        mean = x.mean(dim=reduce_dims, keepdim=True)
-        var = x.var(dim=reduce_dims, keepdim=True, unbiased=False)
-        x = (x - mean) / torch.sqrt(var + epsilon)
-        
-        # print("Before LIFTING", x.shape)
-        # random_matrix = torch.randn(9, 9, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-
-        # # Perform the Einstein summation
-        # x = torch.einsum('ij,aisdf->ajsdf', random_matrix, x)
-        # print("After RANDOM", x.shape)
-
-        # temp = torch.reshape(x, (9, -1))
-        # for i in range(1, 10):
-        #     print(temp[:, i])
-
-        # print("BEFORE LIFTING", x.shape)
-        # for channel in range(0, 6):
-        #     plot_single(x[0, channel, 21, :, :], save_file=f"./videos/p_before_sconv_c={channel}.png")
-        #     print(f"MAX, MIN of {channel}: ", x[0, channel, 21, :, :].max(), " ", x[0, channel, 21, :, :].min())
-        # exit()
         x = self.lifting(x)
         
-        # print("AFTER LIFTING", x.shape)
-        # time = 21
-        # for channel in range(0, 10):
-        #     plot_single(x[0, channel, time, :, :], save_file=f"../videos/before_sconv_c={channel+1}_t={time+1}_p.png")
-        #     print(f"MAX, MIN {x[0, channel, time, :, :].max()}, {x[0, channel, time, :, :].min()}")
-        # exit()
         if self.domain_padding is not None:
             x = self.domain_padding.pad(x)
 
@@ -384,18 +355,6 @@ class FNO(BaseModel, name='FNO'):
         if self.domain_padding is not None:
             x = self.domain_padding.unpad(x)
 
-        # print("BEFORE PROJECTION", x.shape)
-        # time = 21
-        # for channel in range(0, 10):
-        #     plot_single(x[0, channel, time, :, :], save_file=f"../videos/before_proj_c={channel+1}_t={time+1}_p.png")
-        #     print(f"MAX, MIN {x[0, channel, time, :, :].max()}, {x[0, channel, time, :, :].min()}")
-
-        # time = 21
-        # for channel in range(0, 10):
-        #     plot_single(x[0, channel, time, :, :], save_file=f"../videos/before_proj_c={channel+1}_t={time+1}_p.png")
-        #     print(f"MAX, MIN {x[0, channel, time, :, :].max()}, {x[0, channel, time, :, :].min()}")
-        # exit()
-        
         x = self.projection(x)
         x = torch.clamp(x, 0.0, 1.00)
 

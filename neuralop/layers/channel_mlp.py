@@ -64,13 +64,11 @@ class ChannelMLP(nn.Module):
     def _initialize_weights(self):
         for layer in self.fcs:
             if isinstance(layer, nn.Conv1d):
-                print(layer.weight.shape)
                 nn.init.xavier_uniform_(layer.weight)  # Xavier uniform initialization
                 if layer.bias is not None:
                     nn.init.zeros_(layer.bias)
 
     def forward(self, x):
-        # print(self.in_channels, ", ", self.out_channels, ", ", self.hidden_channels, ", ", self.n_layers, ", ", self.non_linearity)
         reshaped = False
         size = list(x.shape)
         if x.ndim > 3:  

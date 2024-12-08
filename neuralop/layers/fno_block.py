@@ -333,8 +333,8 @@ class FNOBlocks(nn.Module):
 
             if index < (self.n_layers - 1):
                 x = self.non_linearity(x)
-                
-        reduce_dims = (0, 2, 3, 4)
+
+        reduce_dims = tuple(i for i in range(x.dim()) if i != 1)
         epsilon = 1e-5
         mean = x.mean(dim=reduce_dims, keepdim=True)
         var = x.var(dim=reduce_dims, keepdim=True, unbiased=False)
