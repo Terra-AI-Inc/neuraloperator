@@ -330,6 +330,7 @@ class SpectralConv(BaseSpectralConv):
         tensor_kwargs = decomposition_kwargs if decomposition_kwargs is not None else {}
         if factorization == "Dense":
             def get_weight(shape):
+                # Emprically seems to converge faster than glorot
                 random_values = torch.rand(shape, dtype=torch.cfloat)
                 scale = torch.sqrt(torch.tensor(float(torch.prod(torch.tensor(shape)))))
                 return random_values / scale

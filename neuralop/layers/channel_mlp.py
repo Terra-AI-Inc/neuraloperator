@@ -60,7 +60,8 @@ class ChannelMLP(nn.Module):
             else:
                 self.fcs.append(nn.Conv1d(self.hidden_channels, self.hidden_channels, 1))
         self._initialize_weights()
-
+    
+    # Use Glorot init for faster convergence: https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
     def _initialize_weights(self):
         for layer in self.fcs:
             if isinstance(layer, nn.Conv1d):

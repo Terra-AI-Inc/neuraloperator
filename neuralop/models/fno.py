@@ -15,6 +15,7 @@ from .base_model import BaseModel
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Utility to inspect channels after each operator in the network
 def plot_single(tensor, title="Image", vmin=None, vmax=None, save_file="./videos/temp.png"):
     if not isinstance(tensor, np.ndarray):
         tensor = tensor.cpu().numpy()
@@ -356,7 +357,7 @@ class FNO(BaseModel, name='FNO'):
             x = self.domain_padding.unpad(x)
 
         x = self.projection(x)
-        x = torch.clamp(x, 0.0, 1.00)
+        x = torch.clamp(x, 0.0, 1.00) # When dealing with saturation target (0.0 - 1.0). Change for targets like pressure, etc...
 
         return x
 

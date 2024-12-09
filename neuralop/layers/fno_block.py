@@ -334,6 +334,7 @@ class FNOBlocks(nn.Module):
             if index < (self.n_layers - 1):
                 x = self.non_linearity(x)
 
+        # Normalize each feature across a batch of inputs: https://arxiv.org/abs/1502.03167
         reduce_dims = tuple(i for i in range(x.dim()) if i != 1)
         epsilon = 1e-5
         mean = x.mean(dim=reduce_dims, keepdim=True)
