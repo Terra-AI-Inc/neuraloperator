@@ -330,8 +330,10 @@ class SpectralConv(BaseSpectralConv):
         tensor_kwargs = decomposition_kwargs if decomposition_kwargs is not None else {}
         if factorization == "Dense":
             def get_weight(shape):
-                w = torch.empty(shape, dtype=torch.cfloat)
-                return nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
+                # Emprically seems to converge faster than glorot
+                random_values = torch.rand(shape, dtype=torch.cfloat)
+                scale = torch.sqrt(torch.tensor(float(torch.prod(torch.tensor(shape)))))
+                return random_values / scale
 
             self.weight = nn.ParameterList(
                 [get_weight(weight_shape) for _ in range(n_layers)]

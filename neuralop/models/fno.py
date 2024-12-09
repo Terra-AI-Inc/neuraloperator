@@ -1,5 +1,6 @@
 from functools import partialmethod
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -10,6 +11,21 @@ from ..layers.fno_block import FNOBlocks
 from ..layers.channel_mlp import ChannelMLP
 from ..layers.complex import ComplexValued
 from .base_model import BaseModel
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Utility to inspect channels after each operator in the network
+def plot_single(tensor, title="Image", vmin=None, vmax=None, save_file="./videos/temp.png"):
+    if not isinstance(tensor, np.ndarray):
+        tensor = tensor.cpu().numpy()
+    fig, ax = plt.subplots(figsize=(6, 6))
+    im = ax.imshow(tensor, cmap="viridis", vmin=vmin, vmax=vmax)
+    cbar = plt.colorbar(im, ax=ax)
+    ax.set_title(title)
+    ax.axis("off")
+    fig.savefig(save_file, dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 class FNO(BaseModel, name='FNO'):
     """N-Dimensional Fourier Neural Operator
@@ -325,9 +341,9 @@ class FNO(BaseModel, name='FNO'):
         # append spatial pos embedding if set
         if self.positional_embedding is not None:
             x = self.positional_embedding(x)
-        
+            
         x = self.lifting(x)
-
+        
         if self.domain_padding is not None:
             x = self.domain_padding.pad(x)
 
@@ -341,6 +357,7 @@ class FNO(BaseModel, name='FNO'):
             x = self.domain_padding.unpad(x)
 
         x = self.projection(x)
+        x = torch.clamp(x, 0.0, 1.00) # When dealing with saturation target (0.0 - 1.0). Change for targets like pressure, etc...
 
         return x
 

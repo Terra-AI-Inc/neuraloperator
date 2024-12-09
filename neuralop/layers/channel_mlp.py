@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -58,6 +59,15 @@ class ChannelMLP(nn.Module):
                 self.fcs.append(nn.Conv1d(self.hidden_channels, self.out_channels, 1))
             else:
                 self.fcs.append(nn.Conv1d(self.hidden_channels, self.hidden_channels, 1))
+        self._initialize_weights()
+    
+    # Use Glorot init for faster convergence: https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
+    def _initialize_weights(self):
+        for layer in self.fcs:
+            if isinstance(layer, nn.Conv1d):
+                nn.init.xavier_uniform_(layer.weight)  # Xavier uniform initialization
+                if layer.bias is not None:
+                    nn.init.zeros_(layer.bias)
 
     def forward(self, x):
         reshaped = False
